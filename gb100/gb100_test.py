@@ -1133,18 +1133,14 @@ concrete_csv = '''
 '''
 
 
-def MSE(h, test_set):
-    """Returns mean squared error of hypothesis h on a given test set."""
-    return sum((y - h(x))**2 for (x, y) in test_set) / float(len(test_set))
-
-
-def CV(instances, k, model_builder):
+def CV(instances, k, model):
     """k-fold cross validation"""
     avg = 0
     for fold in range(k):
         train_set = [x for (i, x) in enumerate(instances) if i % k != fold]
         test_set = [x for (i, x) in enumerate(instances) if i % k == fold]
-        mse = MSE(model_builder(train_set), test_set)
+        model.fit(train_set)
+        mse = sum((y - model.predict(x))**2 for (x, y) in test_set) / len(test_set)
         print('Fold %d: %.9g' % (fold + 1, mse))
         avg += mse
     print('Average MSE: %.9g' % (avg / k))
@@ -1160,8 +1156,8 @@ def main():
     concrete = [parse(s) for s in concrete_csv.strip().split('\n') if s[0] != '#']
 
     random.seed(int(sys.argv[1]) if (len(sys.argv) > 1) else 53387)
-    CV(concrete, 4, lambda s: TreeBoost(s, ntrees=20, shrinkage=0.5, nleaves=10, loss=TreeBoost.L2_LOSS))
-    print('(expected MSE ≈ 25..27)')
+    CV(concrete, 4, TreeBoost(ntrees=20, shrinkage=0.5, nleaves=10, loss=TreeBoost.L2_LOSS))
+    print('(expected MSE ≈ 26.57)')
 
 
 if __name__ == '__main__':
