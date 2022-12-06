@@ -1,3 +1,105 @@
+#!/usr/bin/env python
+
+import random, sys
+from gb100 import TreeBoost
+
+concrete_csv = '''
+# http://archive.ics.uci.edu/ml/datasets/Concrete+Compressive+Strength
+#
+# Concrete Compressive Strength
+#
+# ---------------------------------
+#
+# Data Type: multivariate
+#
+# Abstract: Concrete is the most important material in civil engineering. The
+# concrete compressive strength is a highly nonlinear function of age and
+# ingredients. These ingredients include cement, blast furnace slag, fly ash,
+# water, superplasticizer, coarse aggregate, and fine aggregate.
+#
+# ---------------------------------
+#
+# Sources:
+#
+#   Original Owner and Donor
+#   Prof. I-Cheng Yeh
+#   Department of Information Management
+#   Chung-Hua University,
+#   Hsin Chu, Taiwan 30067, R.O.C.
+#   e-mail:icyeh@chu.edu.tw
+#   TEL:886-3-5186511
+#
+#   Date Donated: August 3, 2007
+#
+# ---------------------------------
+#
+# Data Characteristics:
+#
+# The actual concrete compressive strength (MPa) for a given mixture under a
+# specific age (days) was determined from laboratory. Data is in raw form (not scaled).
+#
+# Summary Statistics:
+#
+# Number of instances (observations): 1030
+# Number of Attributes: 9
+# Attribute breakdown: 8 quantitative input variables, and 1 quantitative output variable
+# Missing Attribute Values: None
+#
+# ---------------------------------
+#
+# Variable Information:
+#
+# Given is the variable name, variable type, the measurement unit and a brief description.
+# The concrete compressive strength is the regression problem. The order of this listing
+# corresponds to the order of numerals along the rows of the database.
+#
+# Name -- Data Type -- Measurement -- Description
+#
+# Cement (component 1) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Blast Furnace Slag (component 2) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Fly Ash (component 3) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Water (component 4) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Superplasticizer (component 5) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Coarse Aggregate (component 6) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Fine Aggregate (component 7) -- quantitative -- kg in a m3 mixture -- Input Variable
+# Age -- quantitative -- Day (1~365) -- Input Variable
+# Concrete compressive strength -- quantitative -- MPa -- Output Variable
+# ---------------------------------
+#
+# Past Usage:
+#
+# Main
+# 1. I-Cheng Yeh, "Modeling of strength of high performance concrete using artificial
+# neural networks," Cement and Concrete Research, Vol. 28, No. 12, pp. 1797-1808 (1998).
+#
+# Others
+# 2. I-Cheng Yeh, "Modeling Concrete Strength with Augment-Neuron Networks," J. of
+# Materials in Civil Engineering, ASCE, Vol. 10, No. 4, pp. 263-268 (1998).
+#
+# 3. I-Cheng Yeh, "Design of High Performance Concrete Mixture Using Neural Networks,"
+# J. of Computing in Civil Engineering, ASCE, Vol. 13, No. 1, pp. 36-42 (1999).
+#
+# 4. I-Cheng Yeh, "Prediction of Strength of Fly Ash and Slag Concrete By The Use of
+# Artificial Neural Networks," Journal of the Chinese Institute of Civil and Hydraulic
+# Engineering, Vol. 15, No. 4, pp. 659-663 (2003).
+#
+# 5. I-Cheng Yeh, "A mix Proportioning Methodology for Fly Ash and Slag Concrete Using
+# Artificial Neural Networks," Chung Hua Journal of Science and Engineering, Vol. 1, No.
+# 1, pp. 77-84 (2003).
+#
+# 6. Yeh, I-Cheng, "Analysis of strength of concrete using design of experiments and
+# neural networks,": Journal of Materials in Civil Engineering, ASCE, Vol.18, No.4,
+# pp.597-604 ?2006?.
+#
+# ---------------------------------
+#
+# Acknowledgements, Copyright Information, and Availability:
+#
+# NOTE: Reuse of this database is unlimited with retention of copyright notice for
+# Prof. I-Cheng Yeh and the following published paper:
+#
+# I-Cheng Yeh, "Modeling of strength of high performance concrete using artificial
+# neural networks," Cement and Concrete Research, Vol. 28, No. 12, pp. 1797-1808 (1998)
 540.0, 0.0, 0.0, 162.0, 2.5, 1040.0, 676.0, 28, 79.99
 540.0, 0.0, 0.0, 162.0, 2.5, 1055.0, 676.0, 28, 61.89
 332.5, 142.5, 0.0, 228.0, 0.0, 932.0, 594.0, 270, 40.27
@@ -1028,3 +1130,39 @@
 148.5, 139.4, 108.6, 192.7, 6.1, 892.4, 780.0, 28, 23.70
 159.1, 186.7, 0.0, 175.6, 11.3, 989.6, 788.9, 28, 32.77
 260.9, 100.5, 78.3, 200.6, 8.6, 864.5, 761.5, 28, 32.40
+'''
+
+
+def MSE(h, test_set):
+    """Returns mean squared error of hypothesis h on a given test set."""
+    return sum((y - h(x))**2 for (x, y) in test_set) / float(len(test_set))
+
+
+def CV(instances, k, model_builder):
+    """k-fold cross validation"""
+    avg = 0
+    for fold in range(k):
+        train_set = [x for (i, x) in enumerate(instances) if i % k != fold]
+        test_set = [x for (i, x) in enumerate(instances) if i % k == fold]
+        mse = MSE(model_builder(train_set), test_set)
+        print('Fold %d: %.9g' % (fold + 1, mse))
+        avg += mse
+    print('Average MSE: %.9g' % (avg / k))
+
+
+def main():
+    def parse(s):
+        vec = [float(s.strip()) for s in s.split(',')]
+        assert len(vec) == 9
+        return (vec[:8], vec[8])
+
+    # sample regression dataset from UCI, converted to .csv
+    concrete = [parse(s) for s in concrete_csv.strip().split('\n') if s[0] != '#']
+
+    random.seed(int(sys.argv[1]) if (len(sys.argv) > 1) else 53387)
+    CV(concrete, 4, lambda s: TreeBoost(s, ntrees=20, shrinkage=0.5, nleaves=10, loss=TreeBoost.L2_LOSS))
+    print('(expected MSE ≈ 25..27)')
+
+
+if __name__ == '__main__':
+    main()

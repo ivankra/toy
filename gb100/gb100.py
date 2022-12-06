@@ -13,7 +13,7 @@ class Node(object):
         if W < 2 * nminobs: return
 
         # find the split which produces largest reduction in CART training error (weighted sum of squared errors)
-        for var in xrange(len(instances[0][0])):
+        for var in range(len(instances[0][0])):
             values = sorted([(x[var], y, w) for (x, y, w, a) in instances if w > 0])
             total_sum = float(sum(w*y for (x, y, w) in values))
             lwei, rwei = 0.0, W
@@ -64,12 +64,13 @@ class TreeBoost(object):
     """Stochastic gradient tree boosting method."""
 
     # Default parameters and loss function specification
-    L2_LOSS = dict(deriv=lambda y,f: f-y, gamma=lambda y,f: sum(y[i]-f[i] for i in xrange(len(y)))/float(len(y)))
-    L1_LOSS = dict(deriv=lambda y,f: cmp(f,y), gamma=lambda y,f: sorted([y[i]-f[i] for i in xrange(len(y))])[len(y)//2])
+    L2_LOSS = dict(deriv=lambda y,f: f-y, gamma=lambda y,f: sum(y[i]-f[i] for i in range(len(y)))/float(len(y)))
+    L1_LOSS = dict(deriv=lambda y,f: cmp(f,y), gamma=lambda y,f: sorted([y[i]-f[i] for i in range(len(y))])[len(y)//2])
     DEFAULTS = dict(ntrees=20, nleaves=5, shrinkage=0.1, nminobs=10, loss=L2_LOSS)
 
     def __init__(self, instances, **p):
-        p = dict(self.DEFAULTS.items() + p.items())           # set missing parameters to defaults
+        for k, v in self.DEFAULTS.items():
+            p[k] = p.get(k, v)
         loss_deriv, argmin_gamma = p['loss']['deriv'], p['loss']['gamma']  # I feel uncomfortable with 2D indices
 
         self.trees = []
@@ -94,44 +95,6 @@ class TreeBoost(object):
     def __call__(self, x):  # evaluation
         return self.bias + sum(tree(x) for tree in self.trees)
 
-### This is line 97 -- End of main code. -- Test stuff follows. -- Documentation at the end. ###
-
-def read_libsvm(fp):
-    """Reads dataset in libsvm format."""
-    res = []
-    for line in fp:
-
-
-
-def MSE(h, test_set):
-    """Returns mean squared error of hypothesis h on a given test set."""
-    return sum((y - h(x))**2 for (x, y) in test_set) / float(len(test_set))
-
-def CV(instances, k, model_builder):
-    """k-fold cross validation"""
-    avg = 0
-    for fold in range(k):
-        train_set = [x for (i, x) in enumerate(instances) if i % k != fold]
-        test_set = [x for (i, x) in enumerate(instances) if i % k == fold]
-        mse = MSE(model_builder(train_set), test_set)
-        print 'Fold %d: %.9g' % (fold + 1, mse)
-        avg += mse
-    print 'Average MSE: %.9g' % (avg / k)
-
-def main():
-    def parse(s):
-        vec = [float(s.strip()) for s in s.split(',')]
-        assert len(vec) == 9
-        return (vec[:8], vec[8])
-
-    # sample regression dataset from UCI, converted to .csv
-    concrete = [parse(s) for s in file('concrete.csv') if s[0] != '#']
-
-    random.seed(int(sys.argv[1]) if (len(sys.argv) > 1) else 53387)
-    CV(concrete, 4, lambda s: TreeBoost(s, ntrees=20, shrinkage=0.5, nleaves=10, loss=TreeBoost.LAD_LOSS))  # => 25.96 average MSE
-
-if __name__ == '__main__':
-    main()
 
 # == Documentation ==
 #
@@ -178,4 +141,3 @@ if __name__ == '__main__':
 #   * http://cran.r-project.org/web/packages/gbm/index.html  (an open-source industrial implementation of g.b.)
 #
 # Author: Ivan Krasilnikov, February 2010.
-# Copyright status: code in this file is released into the public domain by the author.
