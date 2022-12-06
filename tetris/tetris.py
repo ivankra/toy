@@ -1,16 +1,13 @@
 #!/usr/bin/python
 # A simple implementation of the game of Tetris in python.
 #
-# Requirements: python-pygame package.
-#
 # Controls:
 #   * arrow keys to move pieces
 #   * Enter/space/tab to rotate
 #   * p to pause
 #
 # Author: Ivan Krasilnikov, 2011
-# License: public domain
-#
+
 import sys, time, random, pygame
 
 piece_color = {
@@ -29,17 +26,21 @@ def make_dark_color(rgb):
     q = 75
     return (r*q//100, g*q//100, b*q//100)
 
+
 class Field:
     def __init__(self, height, width):
         self.height = height
         self.width = width
         self.data = [None] * (width * height)
+
     def __getitem__(self, rc):
         r, c = rc
         return self.data[r * self.width + c]
+
     def __setitem__(self, rc, value):
         r, c = rc
         self.data[r * self.width + c] = value
+
     def cells(self, y0 = 0, x0 = 0):
         res = set()
         for y in range(self.height):
@@ -47,8 +48,10 @@ class Field:
                 if self[y, x]:
                     res.add((y0 + y, x0 + x))
         return res
+
     def contains(self, r, c):
         return (0 <= r < self.height) and (0 <= c < self.width) and self[r, c] != None
+
 
 class Piece(Field):
     def __init__(self, ch = None, descr = None):
@@ -58,12 +61,14 @@ class Piece(Field):
                 for j in range(4):
                     if descr[i][j] == '#':
                         self[i, j] = ch
+
     def rotated(self):
         res = Piece()
         for i in range(4):
             for j in range(4):
                 res[3 - j, i] = self[i, j]
         return res
+
 
 piece_data = {}
 piece_data['I'] = Piece('I', [" #  ",
@@ -126,7 +131,7 @@ class GameField(Field):
     def introduce(self, new_piece = None):
         assert self.piece == None
         if new_piece == None:
-            new_piece = random.choice(piece_data.values())
+            new_piece = random.choice(list(piece_data.values()))
         self.piece = new_piece
         self.pcol = (self.width - new_piece.width) // 2
         self.prow = -(max(j for i, j in new_piece.cells()) + 1)
@@ -150,10 +155,17 @@ class GameField(Field):
             self.pcol += dc
             return True
 
-    def move_down(self): return self._move(1, 0)
-    def move_left(self): return self._move(0, -1)
-    def move_right(self): return self._move(0, 1)
-    def rotate(self): return self._move(0, 0, 1)
+    def move_down(self):
+        return self._move(1, 0)
+
+    def move_left(self):
+        return self._move(0, -1)
+
+    def move_right(self):
+        return self._move(0, 1)
+
+    def rotate(self):
+        return self._move(0, 0, 1)
 
     def clear_row(self, r):
         for y in range(r-1, -1, -1):
@@ -162,9 +174,11 @@ class GameField(Field):
         for x in range(self.width):
             self[0, x] = None
 
+
 class Game:
     def __init__(self):
         self.reset_game()
+        self.cell_size_pixels = 50
 
     def reset_game(self):
         self.field = GameField()
@@ -174,21 +188,27 @@ class Game:
         self.score = 0
         self.paused = False
 
-    def show_scores(self, final = False):
-        print "%s: %s lines" % (("Final score" if final else "Score"), self.score)
+    def screen_size(self):
+        width = self.field.width * self.cell_size_pixels + 11
+        height = self.field.height * self.cell_size_pixels + 11
+        return (width, height)
 
-    def draw_field(self, field, x0, y0, size = 25):
+    def show_scores(self, final = False):
+        print("%s: %s lines" % (("Final score" if final else "Score"), self.score))
+
+    def draw_field(self, field, x0, y0):
+        size = self.cell_size_pixels
         r = pygame.Rect(x0 - 4, y0 - 4, size * field.width + 7, size * field.height + 7)
         self.field_rect = r
-        pygame.draw.rect(screen, (128, 128, 204), r, 4)
-        for i in range(0, field.height):
-            for j in range(0, field.width):
+        pygame.draw.rect(self.screen, (128, 128, 204), r, 4)
+        for i in range(field.height):
+            for j in range(field.width):
                 light_color = piece_color[field[i, j]]
                 dark_color = make_dark_color(light_color)
                 r = pygame.Rect(x0 + j*size, y0 + i*size, size, size)
-                pygame.draw.rect(screen, dark_color, r)
+                pygame.draw.rect(self.screen, dark_color, r)
                 r = pygame.Rect(x0 + j*size + 1, y0 + i*size + 1, size - 2, size - 2)
-                pygame.draw.rect(screen, light_color, r)
+                pygame.draw.rect(self.screen, light_color, r)
 
     def draw_messages(self, messages):
         for i in range(5):
@@ -203,11 +223,11 @@ class Game:
                 r = pygame.Rect(
                     dx + self.field_rect.centerx - s.get_width() // 2,
                     dy + y, s.get_width(), s.get_height())
-                screen.blit(s, r)
+                self.screen.blit(s, r)
                 y += s.get_height()
 
     def redraw(self):
-        screen.fill((0, 0, 0))
+        self.screen.fill((0, 0, 0))
         self.draw_field(self.field, 4, 4)
 
         if self.over:
@@ -259,7 +279,7 @@ class Game:
         else:
             self.over = True
             self.show_scores(final = True)
-            print "***GAME OVER***"
+            print("***GAME OVER***")
 
     def key_press(self, key):
         if key == pygame.K_ESCAPE:
@@ -271,7 +291,7 @@ class Game:
         elif self.over:
             if key in (pygame.K_SPACE, pygame.K_RETURN):
                 self.reset_game()
-                print
+                print()
         elif self.paused:
             if key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_p):
                 self.paused = False
@@ -291,6 +311,8 @@ class Game:
             self.redraw()
 
     def run(self):
+        self.screen = pygame.display.set_mode(self.screen_size(), pygame.DOUBLEBUF)
+        pygame.display.set_caption('Tetris')
         pygame.key.set_repeat(250, 25)
         pygame.time.set_timer(pygame.USEREVENT, 550)
         self.redraw()
@@ -308,11 +330,9 @@ class Game:
             time.sleep(1.0 / 100)
 
 
-pygame.init()
-try:
-    screen = pygame.display.set_mode((259, 508), pygame.DOUBLEBUF)
-    pygame.display.set_caption("Tetris")
-    game = Game()
-    game.run()
-finally:
-    pygame.quit()
+if __name__ == '__main__':
+    pygame.init()
+    try:
+        Game().run()
+    finally:
+        pygame.quit()
