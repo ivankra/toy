@@ -1,0 +1,13 @@
+Section: gnome
+Priority: optional
+Maintainer: none
+Standards-Version: 3.9.2
+
+Package: gnome-hostname-applet
+Version: 1.0
+Depends: gnome-applets
+Architecture: any
+Description: Hostname applet for GNOME Flashback panels
+Copyright: ../LICENSE
+Files: libhostname-applet.so /usr/lib/gnome-applets/
+ hostname.panel-applet /usr/share/gnome-panel/applets/

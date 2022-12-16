@@ -1,0 +1,10 @@
+[Applet Factory]
+Id=HostnameAppletFactory
+InProcess=true
+Location=/usr/lib/gnome-applets/libhostname-applet.so
+Name=HostnameAppletFactory
+Description=HostnameAppletFactory
+
+[HostnameApplet]
+Name=Hostname Applet
+Description=Displays machine's hostname
